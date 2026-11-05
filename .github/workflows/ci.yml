@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax-check:
+    name: Syntax check (node --check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: node --check all project JS (lib/ excluded)
+        run: |
+          set -e
+          found=0
+          for f in $(find js -name '*.js' -type f); do
+            echo "checking $f"
+            node --check "$f"
+            found=1
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "no JS files found under js/"
+            exit 1
+          fi

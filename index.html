@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方块世界生成器 · Block World Generator</title>
+<link rel="stylesheet" href="./css/style.css">
+<script>
+// 开发辅助：捕获加载期错误，便于自动化测试读取
+window.__errs = [];
+window.addEventListener('error', e => window.__errs.push(String(e.message || e) + ' @ ' + (e.filename || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', e => window.__errs.push('REJ: ' + ((e.reason && (e.reason.stack || e.reason.message)) || e.reason)));
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three.module.min.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<!-- 左侧控制面板 -->
+<aside id="panel">
+  <header class="panel-head">
+    <div class="logo"><i></i><i></i><i></i></div>
+    <div>
+      <h1 data-i18n="app.title">方块世界生成器</h1>
+      <div id="worldName" class="world-name">——</div>
+    </div>
+    <button id="btnLang" class="icon-btn lang-btn" data-i18n-title="tip.lang" title="切换语言">🌐 EN</button>
+  </header>
+
+  <section class="group">
+    <label class="lbl" for="seedInput"><span data-i18n="label.seed">世界种子（Seed）</span></label>
+    <div class="seed-row">
+      <input id="seedInput" type="text" spellcheck="false" data-i18n-placeholder="ph.seed" placeholder="输入任意种子…">
+      <button id="btnCopySeed" class="icon-btn" data-i18n-title="tip.copySeed" title="复制种子">📋</button>
+      <button id="btnShareLink" class="icon-btn" data-i18n-title="tip.share" title="复制分享链接（含全部参数）">🔗</button>
+      <button id="btnRandom" class="icon-btn" data-i18n-title="tip.random" title="随机种子">🎲</button>
+    </div>
+    <button id="btnGenerate" class="primary-btn" data-i18n="btn.generate">✦ 生成世界</button>
+  </section>
+
+  <section class="group">
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.amp">地形起伏</span><span id="valAmp" class="val">1.0</span></label>
+      <input id="paramAmp" type="range" min="0" max="2" step="0.1" value="1">
+    </div>
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.water">水位</span><span id="valWater" class="val">0</span></label>
+      <input id="paramWater" type="range" min="-3" max="4" step="1" value="0">
+    </div>
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.veg">植被密度</span><span id="valVeg" class="val">1.0</span></label>
+      <input id="paramVeg" type="range" min="0" max="2" step="0.1" value="1">
+    </div>
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.village">村庄数量</span><span id="valVillage" class="val">2</span></label>
+      <input id="paramVillage" type="range" min="0" max="3" step="1" value="2">
+    </div>
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.size">世界大小</span><span id="valSize" class="val">128</span></label>
+      <input id="paramSize" type="range" min="96" max="192" step="32" value="128">
+    </div>
+    <div class="slider-row">
+      <label class="lbl"><span data-i18n="label.atmo">天空氛围</span><span id="valAtmo" class="val"></span></label>
+      <select id="paramAtmo" class="select">
+        <option value="day" selected data-i18n="atmo.day">清爽白昼（默认）</option>
+        <option value="dusk" data-i18n="atmo.dusk">暖阳黄昏</option>
+        <option value="overcast" data-i18n="atmo.overcast">烟雨迷蒙</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="group toggles">
+    <label class="check"><input id="chkRotate" type="checkbox"> <span data-i18n="chk.rotate">自动环绕</span></label>
+    <button id="btnFly" class="ghost-btn" data-i18n="btn.fly">✈ 飞行模式（F）</button>
+  </section>
+
+  <section class="group stats">
+    <div class="stat"><b id="statFps">--</b><span data-i18n="stat.fps">FPS</span></div>
+    <div class="stat"><b id="statTris">--</b><span data-i18n="stat.tris">三角面</span></div>
+    <div class="stat"><b id="statCalls">--</b><span data-i18n="stat.calls">Draw Call</span></div>
+    <div class="stat"><b id="statBlocks">--</b><span data-i18n="stat.blocks">方块数</span></div>
+    <div class="stat"><b id="statTime">--</b><span data-i18n="stat.time">生成耗时</span></div>
+    <div class="stat"><b id="statHash">--------</b><span data-i18n="stat.hash">校验和</span></div>
+  </section>
+
+  <footer class="help">
+    <span data-i18n="help.orbit">左键旋转 · 右键平移 · 滚轮缩放</span><br>
+    <span data-i18n="help.fly">飞行模式：WASD 移动 · 空格/Shift 升降 · ESC 退出</span>
+  </footer>
+</aside>
+
+<!-- 生成进度遮罩 -->
+<div id="overlay" class="hidden">
+  <div class="overlay-card">
+    <div class="spinner"></div>
+    <div id="overlayText" data-i18n="overlay.init">正在塑造大陆…</div>
+    <div class="bar"><i id="overlayBar"></i></div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

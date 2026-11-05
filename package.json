@@ -1,0 +1,8 @@
+{
+  "name": "3d-world-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Seed-driven procedural voxel world generator in the browser. 纯前端 Three.js 体素世界生成器。",
+  "type": "module",
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+# 本地优化报告（仅本地留档，不入库）
+OPTIMIZATION-REPORT.md
+
+# 本地测试 / 临时目录
+.tmp-test/
+
+# 依赖与系统文件
+node_modules/
+.DS_Store
+Thumbs.db
