@@ -348,16 +348,18 @@ export class Viewer {
     };
     this._onKeyDown = (e) => {
       const el = document.activeElement;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || (el && el.closest('input, select, textarea, button, [contenteditable="true"]'))) return;
       fly.keys[e.code] = true;
       if (e.code === 'KeyF') this.toggleFly(!fly.on);
     };
     this._onKeyUp = (e) => { fly.keys[e.code] = false; };
+    this._onBlur = () => { fly.keys = {}; };
 
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
     document.addEventListener('mousemove', this._onMouseMove);
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
+    window.addEventListener('blur', this._onBlur);
   }
 
   toggleFly(on) {
@@ -427,6 +429,7 @@ export class Viewer {
     this._lastFrameAt = performance.now();
     this._scheduleNext();
     const dt = Math.min(this._clock.getDelta(), 0.05);
+    if (document.hidden) return;
     const t = this._clock.elapsedTime;
 
     if (this.fly.on) this._updateFly(dt);
@@ -473,6 +476,7 @@ export class Viewer {
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
     document.removeEventListener('mousemove', this._onMouseMove);
     window.removeEventListener('keydown', this._onKeyDown);
+    window.removeEventListener('blur', this._onBlur);
     window.removeEventListener('keyup', this._onKeyUp);
     this.controls.dispose();
     this.clearWorld();

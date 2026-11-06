@@ -153,6 +153,7 @@ export function applyStatic(root = document) {
   });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => {
     el.title = t(el.getAttribute('data-i18n-title'));
+    if (el.tagName === 'BUTTON') el.setAttribute('aria-label', el.title);
   });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = t(el.getAttribute('data-i18n-placeholder'));

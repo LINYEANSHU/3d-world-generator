@@ -10,6 +10,8 @@ import { Viewer } from './scene.js';
 import { seededRandom } from './noise.js';
 import { t, getLang, onLangChange } from './i18n.js';
 
+async function boot() {
+
 // ---------- DOM ----------
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
@@ -118,7 +120,7 @@ let _lastDeco = null;
 // MessageChannel 让出主线程：在后台标签页中也不会被节流（rAF 在隐藏页会永久停摆）
 const nextFrame = () => new Promise((resolve) => {
   const ch = new MessageChannel();
-  ch.port1.onmessage = () => resolve();
+  ch.port1.onmessage = () => { ch.port1.close(); ch.port2.close(); resolve(); };
   ch.port2.postMessage(0);
 });
 let _lastProgressKey = 'overlay.init';
@@ -321,3 +323,18 @@ window.__app = {
   get deco() { return _lastDeco; },
   get villages() { return _lastDeco ? _lastDeco.villages : []; },
 };
+}
+
+boot().catch((error) => {
+  document.getElementById('overlay').classList.add('hidden');
+  const message = document.createElement('p');
+  message.className = 'startup-error';
+  message.setAttribute('role', 'alert');
+  const update = () => { message.textContent = getLang() === 'en'
+    ? 'The 3D view could not start. WebGL may be unavailable. Your saved links are unchanged; try reopening in a compatible browser.'
+    : '三维视图未能启动，可能是 WebGL 不可用。分享链接未受影响，可使用支持 WebGL 的浏览器重新打开。'; };
+  update(); onLangChange(update);
+  document.querySelector('.panel-head').after(message);
+  document.querySelectorAll('#panel button:not(#btnLang), #panel input, #panel select').forEach(el => { el.disabled = true; });
+  console.warn('World view unavailable:', error.message);
+});
