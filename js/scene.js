@@ -164,13 +164,17 @@ export class Viewer {
     this._running = true;
     this._lastRafAt = performance.now();
     this._lastFrameAt = performance.now();
+    this._rafId = 0;
+    this._timerId = 0;
     this._loop = this._loop.bind(this);
     this._scheduleNext();
-    // 看门狗：rAF 失联（窗口被遮挡/隐藏）时接管帧调度
+    // 看门狗：rAF 失联（窗口被遮挡）时接管帧调度，先取消旧定时器避免并发循环叠加
     this._watchdog = setInterval(() => {
-      if (!this._running) return;
+      if (!this._running || document.hidden) return;
       if (performance.now() - this._lastFrameAt > 500) {
         this._lastRafAt = 0; // 强制走定时器分支
+        if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = 0; }
+        if (this._timerId) { clearTimeout(this._timerId); this._timerId = 0; }
         this._loop();
       }
     }, 400);
@@ -196,7 +200,7 @@ export class Viewer {
 
   buildClouds(size) {
     if (this.clouds) {
-      this.worldGroup.remove(this.clouds);
+      this.scene.remove(this.clouds);
       this.clouds.geometry.dispose();
       this.clouds.material.dispose();
       this.clouds = null;
@@ -349,6 +353,7 @@ export class Viewer {
     this._onKeyDown = (e) => {
       const el = document.activeElement;
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || (el && el.closest('input, select, textarea, button, [contenteditable="true"]'))) return;
+      if (e.code === 'Space' && fly.on) e.preventDefault();
       fly.keys[e.code] = true;
       if (e.code === 'KeyF') this.toggleFly(!fly.on);
     };
@@ -371,7 +376,20 @@ export class Viewer {
       const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
       fly.yaw = e.y; fly.pitch = e.x;
       fly.vel.set(0, 0, 0);
-      this.canvas.requestPointerLock();
+      if (typeof this.canvas.requestPointerLock === 'function') {
+        try {
+          const p = this.canvas.requestPointerLock();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => { if (this.fly.on) this.toggleFly(false); });
+          }
+        } catch {
+          this.toggleFly(false);
+          return;
+        }
+      } else {
+        this.toggleFly(false);
+        return;
+      }
     } else {
       this.controls.enabled = true;
       if (document.pointerLockElement) document.exitPointerLock();
@@ -387,7 +405,7 @@ export class Viewer {
     const k = fly.keys;
     const fwdAmt = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
     const rightAmt = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0);
-    const upAmt = (k.Space ? 1 : 0) - (k.ShiftLeft ? 1 : 0);
+    const upAmt = (k.Space ? 1 : 0) - ((k.ShiftLeft || k.ShiftRight) ? 1 : 0);
 
     const speed = 17;
     const dir = new THREE.Vector3();
@@ -412,14 +430,19 @@ export class Viewer {
   // rAF 因窗口不可见被节流时，自动退化为定时器驱动，保证渲染与生成流程不卡死
   _scheduleNext() {
     if (!this._running) return;
+    if (this._rafId || this._timerId) return;
     const rafHealthy = (performance.now() - this._lastRafAt) < 600;
     if (rafHealthy) {
-      requestAnimationFrame(() => {
+      this._rafId = requestAnimationFrame(() => {
+        this._rafId = 0;
         this._lastRafAt = performance.now();
         this._loop();
       });
     } else {
-      setTimeout(() => this._loop(), 16);
+      this._timerId = setTimeout(() => {
+        this._timerId = 0;
+        this._loop();
+      }, 16);
       requestAnimationFrame(() => { this._lastRafAt = performance.now(); }); // 探测 rAF 恢复
     }
   }
@@ -472,6 +495,8 @@ export class Viewer {
   dispose() {
     this._running = false;
     clearInterval(this._watchdog);
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = 0; }
+    if (this._timerId) { clearTimeout(this._timerId); this._timerId = 0; }
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
     document.removeEventListener('mousemove', this._onMouseMove);

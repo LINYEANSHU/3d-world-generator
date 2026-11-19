@@ -191,11 +191,11 @@ export function buildCrossGeometry(tileIdx, h) {
   const pos = [], nor = [], uv = [], col = [], idx = [];
   const tu = (tileIdx % TILE_N) * UV_TILE;
   const tv = 1 - (Math.floor(tileIdx / TILE_N) + 1) * UV_TILE;
-  const e = 0.146, E = 1 - 0.146;
+  const half = 0.354;
 
   const quads = [
-    [[e, e], [E, E]],
-    [[e, E], [E, e]],
+    [[-half, -half], [half, half]],
+    [[-half, half], [half, -half]],
   ];
   for (const [[x1, z1], [x2, z2]] of quads) {
     const base = pos.length / 3;
