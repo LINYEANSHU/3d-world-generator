@@ -8,6 +8,7 @@ import { PLANTS } from './blocks.js';
 import { seededRandom } from './noise.js';
 
 const SUN_DIR = new THREE.Vector3(0.52, 0.72, 0.34).normalize();
+const ORBIT_MAX_POLAR = Math.PI * 0.495;
 
 // 天空氛围预设：day 与初始状态逐字段相同（默认零变化）
 // · dusk：暖阳黄昏——暖橙地平线 + 暮蓝天顶 + 偏暖低强度阳光
@@ -140,7 +141,7 @@ export class Viewer {
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 6;
     this.controls.maxDistance = 420;
-    this.controls.maxPolarAngle = Math.PI * 0.495;
+    this.controls.maxPolarAngle = ORBIT_MAX_POLAR;
     this.controls.autoRotateSpeed = 0.55;
 
     // ---------- 飞行模式 ----------
@@ -306,6 +307,7 @@ export class Viewer {
   }
 
   focusOn(x, y, z, size) {
+    this.controls.maxPolarAngle = ORBIT_MAX_POLAR;
     this.controls.target.set(x, y, z);
     this.camera.position.set(
       x + size * 0.58,
@@ -325,6 +327,11 @@ export class Viewer {
     this.controls.update(); // Discard momentum from the prior viewpoint.
     this.controls.target.fromArray(target);
     this.camera.position.fromArray(position);
+    // A saved flight view can look higher than the regular orbit limit.
+    const vertical = position[1] - target[1];
+    const horizontal = Math.hypot(position[0] - target[0], position[2] - target[2]);
+    const polar = Math.atan2(horizontal, vertical);
+    this.controls.maxPolarAngle = Math.max(ORBIT_MAX_POLAR, Math.min(Math.PI, polar + 1e-10));
     this.controls.update();
     this.controls.enableDamping = damping;
   }
@@ -404,6 +411,7 @@ export class Viewer {
       }
     } else {
       this.controls.enabled = true;
+      this.controls.maxPolarAngle = ORBIT_MAX_POLAR;
       if (document.pointerLockElement) document.exitPointerLock();
       // 把轨道目标移到视线前方，衔接自然
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
@@ -468,7 +476,12 @@ export class Viewer {
     const t = this._clock.elapsedTime;
 
     if (this.fly.on) this._updateFly(dt);
-    else this.controls.update();
+    else {
+      this.controls.update();
+      if (this.controls.maxPolarAngle > ORBIT_MAX_POLAR && this.controls.getPolarAngle() <= ORBIT_MAX_POLAR) {
+        this.controls.maxPolarAngle = ORBIT_MAX_POLAR;
+      }
+    }
 
     // 水面动画
     if (this._waterShader) this._waterShader.uniforms.uTime.value = t;
