@@ -8,3 +8,13 @@ OPTIMIZATION-REPORT.md
 node_modules/
 .DS_Store
 Thumbs.db
+
+# 本地设计复查资料
+/.impeccable/
+/REVIEW-2026-11-06.md
+
+# Windows 桌面打包产物与本地依赖
+/desktop/.cache/
+/desktop/dist/
+/desktop/qa/
+/desktop/node_modules/

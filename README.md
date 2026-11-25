@@ -7,17 +7,23 @@
 **输入一粒种子，生成一座可以环绕观察、飞行探索的方块世界。**
 地形、植被、村庄和像素纹理都在浏览器本地生成；调整参数，再用校验和比较结果。
 
-![当前桌面界面：种子 2026 生成的河流、树林与村庄，以及生成参数和校验和](assets/readme/current-desktop.png)
+**[下载 Windows 版（x64）](https://github.com/LINYEANSHU/3d-world-generator/releases/download/windows-v1.0.0/3d-world-generator-windows-x64.zip)** · [发行说明](https://github.com/LINYEANSHU/3d-world-generator/releases/tag/windows-v1.0.0)
+
+解压 ZIP 后，双击应用文件夹中的 `3D World Generator.exe`。如需移动应用，请保留整个文件夹。
+
+![Windows 桌面版展示雪山、森林、村庄与种子参数面板](assets/readme/windows-desktop.webp)
 
 <details>
-<summary>查看移动端界面</summary>
+<summary>查看浏览器桌面和移动端界面</summary>
+
+<img src="assets/readme/current-desktop.png" alt="当前桌面界面：种子 2026 生成的河流、树林与村庄，以及生成参数和校验和">
 
 <img src="assets/readme/current-mobile.png" width="390" alt="移动端界面：体素世界上方的观察区域与底部可滚动参数面板">
 
 </details>
 
 [![CI](https://github.com/LINYEANSHU/3d-world-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/LINYEANSHU/3d-world-generator/actions/workflows/ci.yml)
-[MIT](LICENSE) · Three.js r160 · 无构建步骤 · 中文 / English
+[MIT](LICENSE) · Three.js r160 · 浏览器版无构建步骤 · 中文 / English
 
 ## 从种子到世界
 
@@ -27,7 +33,7 @@
 - **可自由观察**：鼠标环绕、平移、缩放；桌面端可切到第一人称飞行。
 - **三种氛围**：白昼、黄昏、阴雨只改变天空、雾与光照。
 
-## 本地运行
+## 在浏览器运行
 
 克隆仓库，在项目目录启动静态服务器（需要 Python 3）：
 
@@ -87,6 +93,10 @@ Get-ChildItem js -Recurse -Filter *.js | ForEach-Object { node --check $_.FullNa
 ```
 
 语法检查不验证 WebGL 渲染、生成耗时或跨浏览器表现。
+
+### 构建 Windows 桌面版
+
+在 Windows x64 上安装 Node.js 24 后，从仓库根目录运行 `node desktop/build.cjs` 构建桌面版。输出位于 `desktop/dist/`。
 
 ## 适用范围
 

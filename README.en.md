@@ -7,17 +7,23 @@
 **Turn a seed into a block world you can orbit or explore in flight.**
 Terrain, vegetation, villages and pixel textures are generated locally in your browser. Change the parameters and compare worlds with the displayed checksum.
 
-![Current desktop interface: seed 2026 produces rivers, forests and villages, alongside generation controls and a checksum](assets/readme/current-desktop.png)
+**[Download for Windows (x64)](https://github.com/LINYEANSHU/3d-world-generator/releases/download/windows-v1.0.0/3d-world-generator-windows-x64.zip)** · [Release notes](https://github.com/LINYEANSHU/3d-world-generator/releases/tag/windows-v1.0.0)
+
+Extract the ZIP and double-click `3D World Generator.exe` inside the app folder. Keep the entire folder together when moving the app.
+
+![Windows app showing a snowy mountain, forests, villages and the seed controls](assets/readme/windows-desktop.webp)
 
 <details>
-<summary>View the mobile interface</summary>
+<summary>View the desktop and mobile browser interfaces</summary>
+
+<img src="assets/readme/current-desktop.png" alt="Current desktop interface: seed 2026 produces rivers, forests and villages, alongside generation controls and a checksum">
 
 <img src="assets/readme/current-mobile.png" width="390" alt="Mobile interface with a world viewport above a scrollable bottom control panel">
 
 </details>
 
 [![CI](https://github.com/LINYEANSHU/3d-world-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/LINYEANSHU/3d-world-generator/actions/workflows/ci.yml)
-[MIT](LICENSE) · Three.js r160 · No build step · English / 中文
+[MIT](LICENSE) · Three.js r160 · No browser build step · English / 中文
 
 ## From seed to landscape
 
@@ -27,7 +33,7 @@ Terrain, vegetation, villages and pixel textures are generated locally in your b
 - **Free observation**: orbit, pan and zoom with the mouse, or enter first-person flight on desktop.
 - **Three atmospheres**: day, dusk and overcast change the sky, fog and lighting.
 
-## Run locally
+## Run in a browser
 
 Clone the repository and start a static server from the project directory (Python 3 required):
 
@@ -87,6 +93,10 @@ Get-ChildItem js -Recurse -Filter *.js | ForEach-Object { node --check $_.FullNa
 ```
 
 Syntax checks do not verify WebGL output, generation speed or cross-browser behavior.
+
+### Build the Windows app
+
+To build the desktop app, run `node desktop/build.cjs` from the repository root on Windows x64 with Node.js 24. The build output is in `desktop/dist/`.
 
 ## Scope and limits
 

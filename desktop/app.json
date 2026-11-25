@@ -1,0 +1,13 @@
+{
+  "id": "world-generator",
+  "name": "3D 世界生成器",
+  "exe": "3D World Generator",
+  "static": [
+    "index.html",
+    "css",
+    "js",
+    "lib"
+  ],
+  "background": "#161e15",
+  "webgl": true
+}
