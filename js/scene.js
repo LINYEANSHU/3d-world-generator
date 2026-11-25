@@ -317,6 +317,18 @@ export class Viewer {
 
   setAutoRotate(v) { this.controls.autoRotate = v; }
 
+  restoreOrbit(position, target) {
+    this.toggleFly(false);
+    this.controls.autoRotate = false;
+    const damping = this.controls.enableDamping;
+    this.controls.enableDamping = false;
+    this.controls.update(); // Discard momentum from the prior viewpoint.
+    this.controls.target.fromArray(target);
+    this.camera.position.fromArray(position);
+    this.controls.update();
+    this.controls.enableDamping = damping;
+  }
+
   // ============ 天空氛围预设（不改太阳方向与阴影贴图，切换即时生效） ============
   setAtmosphere(name) {
     const a = ATMOSPHERES[name] || ATMOSPHERES.day;

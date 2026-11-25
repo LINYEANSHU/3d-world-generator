@@ -80,6 +80,16 @@ window.addEventListener('unhandledrejection', e => window.__errs.push('REJ: ' + 
     <button id="btnFly" class="ghost-btn" data-i18n="btn.fly">✈ 飞行模式（F）</button>
   </section>
 
+  <section class="group">
+    <div class="checkpoint-actions">
+      <button id="btnSaveWorld" class="ghost-btn" data-i18n="btn.save" disabled>保存世界</button>
+      <button id="btnLoadWorld" class="ghost-btn" data-i18n="btn.load">恢复存档</button>
+      <button id="btnLandmark" class="ghost-btn" data-i18n="btn.landmark" disabled>下一处地标</button>
+    </div>
+    <p id="worldStatus" class="checkpoint-status" role="status"></p>
+    <p id="landmarkStatus" class="checkpoint-status" role="status"></p>
+  </section>
+
   <section class="group stats">
     <div class="stat"><b id="statFps">--</b><span data-i18n="stat.fps">FPS</span></div>
     <div class="stat"><b id="statTris">--</b><span data-i18n="stat.tris">三角面</span></div>

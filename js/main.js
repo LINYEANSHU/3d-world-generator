@@ -9,6 +9,7 @@ import { meshChunk, CHUNK } from './mesher.js';
 import { Viewer } from './scene.js';
 import { seededRandom } from './noise.js';
 import { t, getLang, onLangChange } from './i18n.js';
+import { CHECKPOINT_KEY, encodeCheckpoint, decodeCheckpoint } from './checkpoint.js';
 
 async function boot() {
 
@@ -21,6 +22,9 @@ const btnRandom = $('btnRandom');
 const btnCopySeed = $('btnCopySeed');
 const btnShareLink = $('btnShareLink');
 const btnFly = $('btnFly');
+const btnSave = $('btnSaveWorld');
+const btnLoad = $('btnLoadWorld');
+const btnLandmark = $('btnLandmark');
 const chkRotate = $('chkRotate');
 const selAtmo = $('paramAtmo');
 const overlay = $('overlay');
@@ -68,6 +72,7 @@ onLangChange(() => {
   btnFly.textContent = viewer.fly.on ? t('btn.fly.exit') : t('btn.fly');
   applyAtmo();
   if (_lastSeedUsed) $('worldName').textContent = worldName(_lastSeedUsed);
+  refreshWorldActions();
   if (!overlay.classList.contains('hidden') && _lastProgressKey) {
     overlayText.textContent = t(_lastProgressKey);
   }
@@ -109,6 +114,15 @@ function refreshSliders() {
     label.textContent = fmt(v);
   }
 }
+function applyWorldParams(params) {
+  seedInput.value = params.seedStr;
+  $('paramAmp').value = params.mountainAmp;
+  $('paramWater').value = params.waterDelta;
+  $('paramVeg').value = params.vegetation;
+  $('paramVillage').value = params.villageCount;
+  $('paramSize').value = params.size;
+  refreshSliders();
+}
 sliderBindings.forEach(b => b.input.addEventListener('input', refreshSliders));
 refreshSliders();
 
@@ -116,6 +130,75 @@ refreshSliders();
 let generating = false;
 let _lastTerra = null;
 let _lastDeco = null;
+let landmarks = [];
+let landmarkIndex = -1;
+let worldStatus = null;
+
+function refreshWorldActions() {
+  btnSave.disabled = generating || !_lastParams;
+  btnLoad.disabled = generating;
+  btnLandmark.disabled = generating || !landmarks.length;
+  $('worldStatus').textContent = worldStatus ? t(worldStatus) : '';
+  const landmark = landmarks[landmarkIndex];
+  $('landmarkStatus').textContent = landmark
+    ? `${t(landmark.label)} · ${landmarkIndex + 1}/${landmarks.length} · ${landmark.x}, ${landmark.z}`
+    : _lastParams && !landmarks.length ? t('landmark.empty') : '';
+}
+
+function showWorldStatus(key) {
+  worldStatus = key;
+  refreshWorldActions();
+}
+
+btnLandmark.addEventListener('click', () => {
+  if (generating || !landmarks.length) return;
+  landmarkIndex = (landmarkIndex + 1) % landmarks.length;
+  const { x, z, label } = landmarks[landmarkIndex];
+  const y = _lastTerra.hmap[x * _lastParams.size + z] + (label === 'landmark.tower' ? 5 : 2);
+  viewer.toggleFly(false);
+  viewer.focusOn(x + 0.5, y, z + 0.5, label === 'landmark.village' ? 38 : 26);
+  refreshWorldActions();
+});
+
+btnSave.addEventListener('click', () => {
+  if (generating || !_lastParams) return;
+  try {
+    const view = {
+      atmosphere: selAtmo.value,
+      autoRotate: chkRotate.checked,
+      position: viewer.camera.position.toArray(),
+      target: viewer.fly.on
+        ? viewer.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(14).add(viewer.camera.position).toArray()
+        : viewer.controls.target.toArray(),
+      landmark: landmarkIndex,
+    };
+    localStorage.setItem(CHECKPOINT_KEY, encodeCheckpoint(_lastParams, view));
+    showWorldStatus('save.ok');
+  } catch {
+    showWorldStatus('save.fail');
+  }
+});
+
+btnLoad.addEventListener('click', async () => {
+  if (generating) return;
+  try {
+    const text = localStorage.getItem(CHECKPOINT_KEY);
+    if (text === null) { showWorldStatus('load.empty'); return; }
+    const { params, view } = decodeCheckpoint(text);
+    applyWorldParams(params);
+    const sameWorld = _lastParams && encodeShareHash(params) === encodeShareHash(_lastParams);
+    if (!sameWorld && !await regenerate(params)) { showWorldStatus('load.fail'); return; }
+    viewer.restoreOrbit(view.position, view.target);
+    chkRotate.checked = view.autoRotate;
+    viewer.setAutoRotate(view.autoRotate);
+    selAtmo.value = view.atmosphere;
+    applyAtmo();
+    landmarkIndex = view.landmark < landmarks.length ? view.landmark : -1;
+    showWorldStatus('load.ok');
+  } catch {
+    showWorldStatus('load.fail');
+  }
+});
 
 // MessageChannel 让出主线程：在后台标签页中也不会被节流（rAF 在隐藏页会永久停摆）
 const nextFrame = () => new Promise((resolve) => {
@@ -130,50 +213,56 @@ function setProgress(key, pct) {
   overlayBar.style.width = `${Math.round(pct * 100)}%`;
 }
 
-async function regenerate() {
-  if (generating) return;
+async function regenerate(params = readParams()) {
+  if (generating) return false;
   generating = true;
   btnGenerate.disabled = true;
+  showWorldStatus(null);
   overlay.classList.remove('hidden');
   setProgress('overlay.seed', 0.02);
   await nextFrame();
   await nextFrame();
 
   const t0 = performance.now();
+  let succeeded = false;
   try {
-    const p = readParams();
+    const p = params;
     seedInput.value = p.seedStr;
-    _lastSeedUsed = p.seedStr;
-    $('worldName').textContent = worldName(p.seedStr);
 
     // 1) 地形
     setProgress('overlay.terrain', 0.08);
     await nextFrame();
     const terra = generateTerrain(p);
-    _lastTerra = terra;
 
     // 2) 结构
     setProgress('overlay.structures', 0.22);
     await nextFrame();
     const deco = decorateWorld(terra, p);
-    _lastDeco = deco;
 
     // 3) 网格
     setProgress('overlay.mesh', 0.3);
     await nextFrame();
+    _lastParams = null;
+    landmarks = [];
+    landmarkIndex = -1;
+    viewer.toggleFly(false);
     viewer.clearWorld();
     const center = new THREE.Vector3(p.size / 2, 10, p.size / 2);
     viewer.setWorldSize(p.size, center);
 
     const n = p.size / CHUNK;
     let done = 0;
+    let sliceStart = performance.now();
     for (let cx = 0; cx < n; cx++) {
       for (let cz = 0; cz < n; cz++) {
         viewer.addChunk(meshChunk(terra.world, cx, cz, terra.seedHash));
         done++;
+        if (performance.now() - sliceStart >= 12) {
+          setProgress('overlay.mesh', 0.3 + 0.6 * (done / (n * n)));
+          await nextFrame();
+          sliceStart = performance.now();
+        }
       }
-      setProgress('overlay.mesh', 0.3 + 0.6 * (done / (n * n)));
-      await nextFrame();
     }
 
     // 4) 植被实例
@@ -194,10 +283,21 @@ async function regenerate() {
     const ms = Math.round(performance.now() - t0);
     $('statBlocks').textContent = blocks >= 1000 ? (blocks / 1000).toFixed(0) + 'k' : blocks;
     $('statTime').textContent = ms + 'ms';
-    $('statHash').textContent = terra.world.checksum();
+    const checksum = terra.world.checksum();
+    $('statHash').textContent = checksum;
+    _lastTerra = terra;
+    _lastDeco = deco;
     _lastParams = p;
+    _lastSeedUsed = p.seedStr;
+    $('worldName').textContent = worldName(p.seedStr);
+    landmarks = [
+      ...deco.villages.map(p => ({ ...p, label: 'landmark.village' })),
+      ...deco.towers.map(p => ({ ...p, label: 'landmark.tower' })),
+      ...deco.ruins.map(p => ({ ...p, label: 'landmark.ruin' })),
+    ];
+    succeeded = true;
     try { history.replaceState(null, '', '#' + encodeShareHash(p)); } catch { /* file:// 某些环境不允许，忽略 */ }
-    console.log(`[世界] seed="${p.seedStr}" size=${p.size} blocks=${blocks} checksum=${terra.world.checksum()} time=${ms}ms villages=${deco.villages.length} towers=${deco.towers.length} ruins=${deco.ruins.length}`);
+    console.log(`[世界] seed="${p.seedStr}" size=${p.size} blocks=${blocks} checksum=${checksum} time=${ms}ms villages=${deco.villages.length} towers=${deco.towers.length} ruins=${deco.ruins.length}`);
   } catch (err) {
     console.error('世界生成失败：', err);
     _lastProgressKey = null;
@@ -208,10 +308,12 @@ async function regenerate() {
   overlay.classList.add('hidden');
   btnGenerate.disabled = false;
   generating = false;
+  refreshWorldActions();
+  return succeeded;
 }
 
 // ---------- 事件 ----------
-btnGenerate.addEventListener('click', regenerate);
+btnGenerate.addEventListener('click', () => regenerate());
 btnRandom.addEventListener('click', () => {
   seedInput.value = String((Math.random() * 1e9) | 0);
   regenerate();
@@ -303,14 +405,7 @@ btnShareLink.addEventListener('click', async () => {
 // ---------- 启动 ----------
 {
   const shared = decodeShareHash();
-  if (shared) {
-    seedInput.value = shared.seedStr;
-    $('paramAmp').value = shared.mountainAmp;
-    $('paramWater').value = shared.waterDelta;
-    $('paramVeg').value = shared.vegetation;
-    $('paramVillage').value = shared.villageCount;
-    $('paramSize').value = shared.size;
-  }
+  if (shared) applyWorldParams(shared);
 }
 refreshSliders();
 seedInput.value = seedInput.value.trim() || '2026';

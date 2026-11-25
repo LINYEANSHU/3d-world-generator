@@ -62,6 +62,8 @@ python -m http.server 8137 --bind 127.0.0.1
 | 复制种子 / 参数链接 | 种子旁的剪贴板 / 链接按钮 |
 | 飞行 | `F` 或飞行按钮；`WASD` 移动，`Space` / `Shift` 升降，`Esc` 退出 |
 | 自动环绕 / 天空 / 语言 | 面板复选框 / 下拉框 / 语言按钮 |
+| 巡览 | 点击「下一处地标」依次聚焦村庄、了望塔和遗迹 |
+| 保存 / 恢复世界 | 本地单个存档保留生成参数、天空、视角和当前地标 |
 
 | 参数 | 可选范围 | 默认值 |
 | --- | --- | --- |
@@ -92,7 +94,7 @@ CI 使用 Node.js 22 对 `js/` 下全部脚本执行语法检查；PowerShell �
 Get-ChildItem js -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName; if ($LASTEXITCODE) { throw $_.FullName } }
 ```
 
-语法检查不验证 WebGL 渲染、生成耗时或跨浏览器表现。
+运行 `node --test tests/checkpoint.test.js` 可验证存档格式、往返和无效数据处理。
 
 ### 构建 Windows 桌面版
 

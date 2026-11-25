@@ -62,6 +62,8 @@ The app uses ES Modules and an import map, so serve it over HTTP. Three.js and O
 | Copy seed / parameter link | Clipboard / link button beside the seed |
 | Flight | `F` or flight button; `WASD` to move, `Space` / `Shift` to ascend / descend, `Esc` to exit |
 | Auto-orbit / atmosphere / language | Checkbox / dropdown / language button |
+| Landmark tour | **Next Landmark** visits villages, watchtowers and ruins in order |
+| Save / restore world | One local checkpoint stores generation settings, sky, camera and current landmark |
 
 | Parameter | Range | Default |
 | --- | --- | --- |

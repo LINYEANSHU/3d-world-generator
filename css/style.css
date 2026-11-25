@@ -279,3 +279,20 @@ input, select { accent-color: var(--accent); caret-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+.checkpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.checkpoint-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.checkpoint-status {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+.checkpoint-status:not(:empty) {
+  margin-top: 6px;
+}
