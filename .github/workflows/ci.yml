@@ -7,7 +7,7 @@ on:
 
 jobs:
   syntax-check:
-    name: Syntax check (node --check)
+    name: Check JavaScript and world checkpoints
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,3 +29,6 @@ jobs:
             echo "no JS files found under js/"
             exit 1
           fi
+
+      - name: Test world checkpoint recovery
+        run: node --test tests/checkpoint.test.js
